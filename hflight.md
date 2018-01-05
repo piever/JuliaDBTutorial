@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is a brief tutorial on working with data using the new programming language Julia. In particular, I will use the [JuliaDB](http://juliadb.org/latest/) package to reproduce a well known [tutorial](https://rpubs.com/justmarkham/dplyr-tutorial). The data is some example flight dataset that you can find [here](https://raw.githubusercontent.com/piever/presentation/master/hflights.csv).
+This is a brief tutorial on working with data using the new programming language Julia. In particular, I will use the [JuliaDB](http://juliadb.org/latest/) package to reproduce a well known [tutorial](https://rpubs.com/justmarkham/dplyr-tutorial). The data is some example flight dataset that you can find [here](https://raw.githubusercontent.com/piever/JuliaDBTutorial/master/hflights.csv).
 
 Simply open the link and choose `Save as` from the `File` menu in your browser to save the data to a folder on your computer.
 
