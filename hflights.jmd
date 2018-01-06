@@ -161,27 +161,23 @@ manipulate data. For example we can rank, within each `UniqueCarrier`, how much
 delay a given flight had:
 
 ```julia
-Lazy.@as x flights begin
-    reindex(x, :UniqueCarrier)
-    groupby(@NT(rank = t->sortperm(t, rev = true)), x, :UniqueCarrier, select = :DepDelay, flatten = true)
-end
+using StatsBase
+fc = reindex(filter(t->!isnull(t.DepDelay), flights), :UniqueCarrier)
+gfc = groupby(@NT(rank = t->ordinalrank(-get.(t))), fc, select = :DepDelay, flatten = true)
+ugfc = pushcol(fc, :rank, columns(gfc, :rank))
 ```
 
 Using this information, we can, for each `UniqueCarrier`, calculate on which two days of the year
 they had their longest departure delays
 
 ```julia
-orderedflights = reindex(flights, :UniqueCarrier)
-groupby(@NT(rank = t->sortperm(t, rev = true)), orderedflights, select = :DepDelay, flatten = true)
-rankedflights = pushcol(orderedflights, :rank, 
-select(flights, (:UniqueCarrier, :Month, :DayofMonth, :DepDelay))[find(i.rank <= 2 for i in x)]
+select(filter(t->t.rank <= 2, ugfc), (:UniqueCarrier, :Month, :DayofMonth, :DepDelay, :rank))
 ```
 
+Though in this case, it would have been simpler to use Julia partial sorting:
+
 ```julia
-Lazy.@as x flights begin
-    filter(t -> !isnull(t.DepDelay), x)
-    groupby(x, :UniqueCarrier, select = (:Month, :DayofMonth, :DepDelay), flatten = true) do dd
-        select(dd, 1:2, by = i -> i.DepDelay, rev = true)
-    end
+groupby(fc, select = (:Month, :DayofMonth, :DepDelay), flatten = true) do dd
+    select(dd, 1:2, by = i -> i.DepDelay, rev = true)
 end
 ```
