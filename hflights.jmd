@@ -158,26 +158,30 @@ groupby(@NT(flight_count = length, plane_count = length∘union), flights, :Dest
 In the previous section, we always applied functions that reduced a table or vector to a single value.
 Window functions instead take a vector and return a vector of the same length, and can also be used to
 manipulate data. For example we can rank, within each `UniqueCarrier`, how much
-delay a given flight had:
+delay a given flight had and figure out the day and month with the two greatest delays:
 
 ```julia
 using StatsBase
-fc = reindex(filter(t->!isnull(t.DepDelay), flights), :UniqueCarrier)
-gfc = groupby(@NT(rank = t->ordinalrank(-get.(t))), fc, select = :DepDelay, flatten = true)
-ugfc = pushcol(fc, :rank, columns(gfc, :rank))
-```
-
-Using this information, we can, for each `UniqueCarrier`, calculate on which two days of the year
-they had their longest departure delays
-
-```julia
-select(filter(t->t.rank <= 2, ugfc), (:UniqueCarrier, :Month, :DayofMonth, :DepDelay, :rank))
+fc = filter(t->!isnull(t.DepDelay), flights)
+gfc = groupby(fc, :UniqueCarrier, select = (:Month, :DayofMonth, :DepDelay), flatten = true) do dd
+    rks = ordinalrank([i.DepDelay for i in dd], rev = true)
+    sort(dd[rks .<= 2], by =  i -> i.DepDelay, rev = true)
+end
 ```
 
 Though in this case, it would have been simpler to use Julia partial sorting:
 
 ```julia
-groupby(fc, select = (:Month, :DayofMonth, :DepDelay), flatten = true) do dd
+groupby(fc, :UniqueCarrier, select = (:Month, :DayofMonth, :DepDelay), flatten = true) do dd
     select(dd, 1:2, by = i -> i.DepDelay, rev = true)
 end
+```
+
+For each month, calculate the number of flights and the change from the previous month
+
+```julia
+x = reindex(flights, :Month)
+y = groupby(length, x)
+lengths = columns(y, :length)
+pushcol(y, :change, lengths .- circshift(lengths, -1))
 ```
