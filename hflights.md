@@ -11,8 +11,8 @@ Loading a csv file is straightforward with JuliaDB:
 
 
 ```julia
-using JuliaDB
-flights = loadtable("/home/pietro/Downloads/hflights.csv");
+using JuliaDB, IndexedTables
+flights = loadtable("/home/pietro/Documents/testdata/hflights.csv");
 ```
 
 Of course, replace the path with the location of the dataset you have just downloaded.
@@ -79,15 +79,11 @@ select(flights, (:DepTime, :ArrTime, :FlightNum))
 
 
 
-Let's select all columns between `:Year` and `:Month` as well as all columns containing "Taxi" or "Delay" in their name:
+Let's select all columns between `:Year` and `:Month` as well as all columns containing "Taxi" or "Delay" in their name. `Between` selects columns between two specified extremes, passing a function filters column names by that function and `Join` takes the union of all selectors.
 
 
 ```julia
-cn = colnames(flights)
-i1, i2 = find(indexin(cn, [:Year, :DayofMonth]))
-taxicols = find(i -> contains(string(i), "Taxi"), cn)
-delaycols = find(i -> contains(string(i), "Delay"), cn)
-select(flights, Tuple(union(i1:i2, taxicols, delaycols)))
+select(flights, Join(Between(:Year, :DayofMonth), i -> contains(string(i), "Taxi"), i -> contains(string(i), "Delay")))
 ```
 
 
@@ -266,36 +262,45 @@ or, in reverse order:
 sort(flights, :DepDelay, select = (:UniqueCarrier, :DepDelay), rev = true)
 ```
 
+## Apply a function row by row
+
+To apply a function row by row, use `map`: the first argument is the anonymous function, the second is the dataset.
+
+
+```julia
+speed = map(i -> i.Distance / i.AirTime * 60, flights)
+```
 
 
 
-    Table with 227496 rows, 2 columns:
-    UniqueCarrier  DepDelay
-    ───────────────────────
-    "AA"           #NA
-    "AA"           #NA
-    "B6"           #NA
-    "B6"           #NA
-    "B6"           #NA
-    "CO"           #NA
-    "CO"           #NA
-    "CO"           #NA
-    "CO"           #NA
-    "CO"           #NA
-    "CO"           #NA
-    "CO"           #NA
-    ⋮
-    "CO"           -17
-    "XE"           -17
-    "XE"           -17
-    "US"           -17
-    "EV"           -17
-    "CO"           -18
-    "EV"           -18
-    "XE"           -19
-    "XE"           -19
-    "MQ"           -23
-    "OO"           -33
+
+    227496-element DataValues.DataValueArray{Float64,1}:
+     336.0  
+     298.667
+     280.0  
+     344.615
+     305.455
+     298.667
+     312.558
+     336.0  
+     327.805
+     298.667
+     320.0  
+     327.805
+     305.455
+     ⋮      
+     261.818
+     508.889
+     473.793
+     479.302
+     496.627
+     468.6  
+     478.163
+     483.093
+     498.511
+     445.574
+     424.688
+     460.678
 
 
 
@@ -304,16 +309,14 @@ Use the `pushcol` function to add a column to an existing dataset:
 
 
 ```julia
-distance, airtime = columns(flights, (:Distance, :AirTime))
-pushcol(flights, :Speed, distance ./ airtime .* 60);
+pushcol(flights, :Speed, speed);
 ```
 
 If you need to add the new column to the existing dataset:
 
 
 ```julia
-distance, airtime = columns(flights, (:Distance, :AirTime))
-flights = pushcol(flights, :Speed, distance ./ airtime .* 60);
+flights = pushcol(flights, :Speed, speed);
 ```
 
 ## Reduce variables to values
@@ -584,7 +587,7 @@ delay a given flight had and figure out the day and month with the two greatest 
 using StatsBase
 fc = filter(t->!isnull(t.DepDelay), flights)
 gfc = groupby(fc, :UniqueCarrier, select = (:Month, :DayofMonth, :DepDelay), flatten = true) do dd
-    rks = ordinalrank([i.DepDelay for i in dd], rev = true)
+    rks = ordinalrank(column(dd, :DepDelay), rev = true)
     sort(dd[rks .<= 2], by =  i -> i.DepDelay, rev = true)
 end
 ```
