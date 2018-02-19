@@ -682,8 +682,8 @@ pushcol(y, :change, lengths .- lag(lengths))
 
     Table with 12 rows, 3 columns:
     [1mMonth  [22mlength  change
-    ──────────────────────
-    1      18910   missing
+    ─────────────────────
+    1      18910   NaN
     2      17128   -1782
     3      19470   2342
     4      18593   -877
@@ -695,6 +695,26 @@ pushcol(y, :change, lengths .- lag(lengths))
     10     18696   631
     11     18021   -675
     12     19117   1096
+
+
+
+### Warning
+
+`missing` (the official Julia way of representing missing data) has not yet been adopted by JuliaDB, so using ShiftedArrays in combination with JuliaDB may be slightly troublesome in Julia 0.6. The situation should be solved in Julia 0.7, where the adoption of `missing` should become more widespread. You can use a different default value with ShiftedArrays (for example, with an `Array` of `Float64` you could do:
+
+
+```julia
+v = [1.2, 2.3, 3.4]
+lag(v, default = NaN)
+```
+
+
+
+
+    3-element ShiftedArrays.ShiftedArray{Float64,Float64,1,Array{Float64,1}}:
+     NaN  
+       1.2
+       2.3
 
 
 
